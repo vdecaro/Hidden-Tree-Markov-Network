@@ -55,11 +55,11 @@ eval_dataset = tf.data.Dataset.from_tensor_slices((eval_data, eval_lab)).batch(b
 def train_step(batch_features, batch_labels, bu_model, td_model, rdn, adam_opt):
     with tf.GradientTape() as bu_tape:
         bu_likelihood = generative_inference(batch_features, bu_model)
-        neg_bu_likelihood = -1 * bu_likelihood
+        neg_bu_likelihood = -1 * tf.reduce_mean(bu_likelihood, axis=0)
 
     with tf.GradientTape() as td_tape:
         td_likelihood = generative_inference(batch_features, td_model)
-        neg_td_likelihood = -1 * td_likelihood
+        neg_td_likelihood = -1 * tf.reduce_mean(td_likelihood, axis=0)
 
     with tf.GradientTape() as rdn_tape:
         logits = rdn(bu_likelihood, td_likelihood)
@@ -83,7 +83,7 @@ def eval_step(batch_features, batch_labels, bu_model, td_model, rdn):
     td_likelihood = generative_inference(batch_features, td_model)
 
     logits = rdn(bu_likelihood, td_likelihood)
-    loss = cce(labels, batch_labels)
+    loss = cce(batch_labels, logits)
 
     predictions = tf.argmax(logits, axis=0)
     acc = accuracy(batch_labels, predictions)
