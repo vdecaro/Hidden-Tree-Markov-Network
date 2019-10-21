@@ -1,7 +1,10 @@
 import tensorflow as tf
+import numpy as np
 import sys
 
-from data.inex.preproc import parse_and_preproc_data
+from data.synth_graphs.parse import parse_and_stats
+from data.graph_dataset_preprocessing import to_dict, to_dict_batch
+
 from genmodel.htmm.bottom_up import BottomUpHTMM
 from genmodel.htmm.top_down import TopDownHTMM
 from graph_htmn.generative_inference import generative_inference
@@ -21,21 +24,19 @@ if gpus:
 
 dataset, n_bu, n_td, C, batch_size = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), \
                                         int(sys.argv[4]), int(sys.argv[5])
-features, labels = parse_and_preproc_data(dataset)
 
-sss = StratifiedShuffleSplit(n_splits=1, test_size=0.33, random_state=0)
-train_index, eval_index = list(sss.split(features['tree'], labels))[0]
+train_data, eval_data, test_data, max_trees, L = parse_and_stats(dataset)
 
-train_data, train_lab = {'tree': features['tree'][train_index],
-                         'limits': features['limits'][train_index]}, labels[train_index]
+train_feat, train_lab = to_dict(train_data['nodes'], train_data['adj'], L), train_data['lab']
+train_feat = to_dict_batch(train_feat, max_trees)
 
-eval_data, eval_lab = {'tree': features['tree'][eval_index],
-                       'limits': features['limits'][eval_index]}, labels[eval_index]
+eval_feat, eval_lab = to_dict(eval_data['nodes'], train_data['adj'], L), eval_data['lab']
+eval_feat = to_dict_batch(eval_feat, max_trees)
 
 
-bu_model = BottomUpHTMM(n_bu, C, 32, 366)
-td_model = TopDownHTMM(n_td, C, 32, 366)
-rdn = RecurrentRDN('C', 11, n_bu, n_td)
+bu_model = BottomUpHTMM(n_bu, C, L, 5)
+td_model = TopDownHTMM(n_td, C, L, 5)
+rdn = RecurrentRDN('C', 3, n_bu, n_td, max_trees)
 
 adam_opt = tf.keras.optimizers.Adam(learning_rate=1e-3)
 
@@ -51,19 +52,20 @@ train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
 eval_dataset = tf.data.Dataset.from_tensor_slices((eval_data, eval_lab)).batch(batch_size)
 
 
-@tf.function
 def train_step(batch_features, batch_labels, bu_model, td_model, rdn, adam_opt):
     with tf.GradientTape() as bu_tape:
-        bu_likelihood = generative_inference(batch_features, bu_model)
-        neg_bu_likelihood = -1 * bu_likelihood
+        bu_likelihood = generative_inference(batch_features, bu_model, max_trees)
+        aux_bu_likelihood = tf.reduce_sum(bu_likelihood, axis=1)/batch_features['n_trees']
+        neg_bu_likelihood = -1 * tf.reduce_mean(aux_bu_likelihood, axis=0)
 
     with tf.GradientTape() as td_tape:
-        td_likelihood = generative_inference(batch_features, td_model)
-        neg_td_likelihood = -1 * td_likelihood
+        td_likelihood = generative_inference(batch_features, td_model, max_trees)
+        aux_td_likelihood = tf.reduce_sum(td_likelihood, axis=1)/batch_features['n_trees']
+        neg_td_likelihood = -1 * tf.reduce_mean(aux_td_likelihood, axis=0)
 
     with tf.GradientTape() as rdn_tape:
         logits = rdn(bu_likelihood, td_likelihood)
-        one_hot = tf.one_hot(batch_labels, 11)
+        one_hot = tf.one_hot(batch_labels, 3)
         loss = cce(one_hot, logits)
 
     bu_grads = bu_tape.gradient(neg_bu_likelihood, bu_model.trainable_weights)
@@ -77,13 +79,12 @@ def train_step(batch_features, batch_labels, bu_model, td_model, rdn, adam_opt):
     return loss
 
 
-@tf.function
 def eval_step(batch_features, batch_labels, bu_model, td_model, rdn):
-    bu_likelihood = generative_inference(batch_features, bu_model)
-    td_likelihood = generative_inference(batch_features, td_model)
+    bu_likelihood = generative_inference(batch_features, bu_model, max_trees)
+    td_likelihood = generative_inference(batch_features, td_model, max_trees)
 
     logits = rdn(bu_likelihood, td_likelihood)
-    loss = cce(labels, batch_labels)
+    loss = cce(batch_labels, logits)
 
     predictions = tf.argmax(logits, axis=0)
     acc = accuracy(batch_labels, predictions)
