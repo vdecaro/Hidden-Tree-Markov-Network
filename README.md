@@ -1,5 +1,5 @@
 # Hidden-Tree-Markov-Network
-This library implements the Hidden Tree Markov Network ("[Hidden Tree Markov Networks: Deep and Wide Learning for Structured Data](https://arxiv.org/abs/1711.07784)" by D. Bacciu), a neuro-probabilistic model for the transduction of tree-structured data.
+This repository contains the implementation of Hidden Tree Markov Network ("[Hidden Tree Markov Networks: Deep and Wide Learning for Structured Data](https://arxiv.org/abs/1711.07784)" by D. Bacciu), a neuro-probabilistic model for the transduction of tree-structured data.
 
 ## Content
 This repository contains:
