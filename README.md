@@ -12,4 +12,4 @@ This repository contains:
 This model is an extension of the Relative Density Net, developed by A. D. Brown and G. E. Hinton in the paper "[Relative Density Nets: A New Way to Combine Backpropagation with HMM's](https://pdfs.semanticscholar.org/943d/5f9deb552d25d6b1377b09ad3fa00cbe7b3e.pdf)", and the modularity of the implementation allows to easily make use of different HMM's as input generative model.
 
 ### Author
-This implementation has been developed as a final project for the Bachelor's Degree in Computer Science at the University of Pisa by Valerio De Caro.
+This implementation has been developed by Valerio De Caro as final project for the Bachelor's Degree in Computer Science at the University of Pisa.
