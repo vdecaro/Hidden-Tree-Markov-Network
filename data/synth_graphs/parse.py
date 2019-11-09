@@ -3,7 +3,7 @@ import scipy
 
 
 def parse_and_stats(file):
-    loaded = np.load('synth_data/'+file+'.npz', allow_pickle=True)
+    loaded = np.load('./data/synth_graphs/'+file+'.npz', allow_pickle=True)
     if file == 'easy_small':
         max_trees, L = 78, 12
     if file == 'easy':

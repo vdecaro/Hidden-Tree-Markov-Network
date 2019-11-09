@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import sys
+import os
 
 from data.synth_graphs.parse import parse_and_stats
 from data.graph_dataset_preprocessing import to_dict, to_dict_batch
@@ -27,10 +28,10 @@ dataset, n_bu, n_td, C, batch_size = sys.argv[1], int(sys.argv[2]), int(sys.argv
 
 train_data, eval_data, test_data, max_trees, L = parse_and_stats(dataset)
 
-train_feat, train_lab = to_dict(train_data['nodes'], train_data['adj'], L), train_data['lab']
+train_feat, train_lab = to_dict(train_data['adj'], train_data['nodes'], L), train_data['lab']
 train_feat = to_dict_batch(train_feat, max_trees)
 
-eval_feat, eval_lab = to_dict(eval_data['nodes'], train_data['adj'], L), eval_data['lab']
+eval_feat, eval_lab = to_dict(eval_data['adj'], eval_data['nodes'], L), eval_data['lab']
 eval_feat = to_dict_batch(eval_feat, max_trees)
 
 
@@ -46,21 +47,22 @@ loss_mean = tf.keras.metrics.Mean()
 accuracy_mean = tf.keras.metrics.Mean()
 accuracy = tf.keras.metrics.Accuracy()
 
-train_dataset = tf.data.Dataset.from_tensor_slices((train_data, train_lab))
+train_dataset = tf.data.Dataset.from_tensor_slices((train_feat, train_lab))
 train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
-
-eval_dataset = tf.data.Dataset.from_tensor_slices((eval_data, eval_lab)).batch(batch_size)
+eval_dataset = tf.data.Dataset.from_tensor_slices((eval_feat, eval_lab)).batch(batch_size)
 
 
 def train_step(batch_features, batch_labels, bu_model, td_model, rdn, adam_opt):
     with tf.GradientTape() as bu_tape:
         bu_likelihood = generative_inference(batch_features, bu_model, max_trees)
-        aux_bu_likelihood = tf.reduce_sum(bu_likelihood, axis=1)/batch_features['n_trees']
+        to_div = tf.cast(batch_features['n_trees'], dtype=tf.float32)
+        aux_bu_likelihood = tf.reduce_sum(bu_likelihood, axis=1)/to_div
         neg_bu_likelihood = -1 * tf.reduce_mean(aux_bu_likelihood, axis=0)
 
     with tf.GradientTape() as td_tape:
         td_likelihood = generative_inference(batch_features, td_model, max_trees)
-        aux_td_likelihood = tf.reduce_sum(td_likelihood, axis=1)/batch_features['n_trees']
+        to_div = tf.cast(batch_features['n_trees'], dtype=tf.float32)
+        aux_td_likelihood = tf.reduce_sum(td_likelihood, axis=1)/to_div
         neg_td_likelihood = -1 * tf.reduce_mean(aux_td_likelihood, axis=0)
 
     with tf.GradientTape() as rdn_tape:

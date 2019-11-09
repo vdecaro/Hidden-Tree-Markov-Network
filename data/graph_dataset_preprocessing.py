@@ -33,7 +33,7 @@ def to_dict_batch(features, max_trees):
         features['n_levels'][i] = np.pad(n_levels, [[0, max_trees-n_levels.shape[0]]], 'constant')
 
         levels = features['levels'][i]
-        features['levels'][i] = np.pad(trees, [[0, max_trees-levels.shape[0]], 
+        features['levels'][i] = np.pad(levels, [[0, max_trees-levels.shape[0]], 
                                                [0, max_levels-levels.shape[1]]], 'constant')
 
     features['n_trees'] = np.stack(features['n_trees'])
