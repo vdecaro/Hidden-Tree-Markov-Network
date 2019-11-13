@@ -31,8 +31,10 @@ train_data, eval_data, test_data, max_trees, L = parse_and_stats(dataset)
 train_feat, train_lab = to_dict(train_data['adj'], train_data['nodes'], L), train_data['lab']
 train_feat = to_dict_batch(train_feat, max_trees)
 
-eval_feat, eval_lab = to_dict(eval_data['adj'], eval_data['nodes'], L), eval_data['lab']
-eval_feat = to_dict_batch(eval_feat, max_trees)
+def dummy_function():
+    eval_feat, eval_lab = to_dict(eval_data['adj'], eval_data['nodes'], L), eval_data['lab']
+    eval_feat = to_dict_batch(eval_feat, max_trees)
+    return "boh"
 
 
 bu_model = BottomUpHTMM(n_bu, C, L, 5)
