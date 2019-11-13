@@ -55,13 +55,13 @@ eval_dataset = tf.data.Dataset.from_tensor_slices((eval_feat, eval_lab)).batch(b
 def train_step(batch_features, batch_labels, bu_model, td_model, rdn, adam_opt):
     with tf.GradientTape() as bu_tape:
         bu_likelihood = generative_inference(batch_features, bu_model, max_trees)
-        to_div = tf.cast(batch_features['n_trees'], dtype=tf.float32)
+        to_div = tf.expand_dims(tf.cast(batch_features['n_trees'], dtype=tf.float32), axis=-1)
         aux_bu_likelihood = tf.reduce_sum(bu_likelihood, axis=1)/to_div
         neg_bu_likelihood = -1 * tf.reduce_mean(aux_bu_likelihood, axis=0)
 
     with tf.GradientTape() as td_tape:
         td_likelihood = generative_inference(batch_features, td_model, max_trees)
-        to_div = tf.cast(batch_features['n_trees'], dtype=tf.float32)
+        to_div = tf.expand_dims(tf.cast(batch_features['n_trees'], dtype=tf.float32), axis=-1)
         aux_td_likelihood = tf.reduce_sum(td_likelihood, axis=1)/to_div
         neg_td_likelihood = -1 * tf.reduce_mean(aux_td_likelihood, axis=0)
 

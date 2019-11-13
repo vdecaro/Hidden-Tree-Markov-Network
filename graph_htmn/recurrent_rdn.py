@@ -14,8 +14,6 @@ class RecurrentRDN(tf.keras.Model):
             self.bu_bnorm = tf.keras.layers.BatchNormalization()
             self.td_bnorm = tf.keras.layers.BatchNormalization()
 
-        self.masking = tf.keras.layers.Masking(mask_value=0., input_shape=(max_trees, n_bu+n_td))
-
         contrastive_units = fact(n_bu+n_td) // (2*fact(n_bu+n_td-2))
         self.rec_contrastive = \
             tf.keras.layers.GRU(units=contrastive_units,
@@ -47,8 +45,12 @@ class RecurrentRDN(tf.keras.Model):
         elif td_likelihood is not None:
             likelihood = td_likelihood
 
-        mask = self.masking(likelihood)
-        contrastive_values = self.rec_contrastive(likelihood, mask)
+        mask = tf.reduce_any(likelihood > 0, axis=-1)
+        contrastive_values = self.rec_contrastive(inputs=likelihood, 
+                                                  mask=mask,
+                                                  training=False,
+                                                  initial_state=self.rec_contrastive.get_initial_state(likelihood)
+                                                 )
 
         attention_values = self.attention(contrastive_values)
 
