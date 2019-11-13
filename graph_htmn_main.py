@@ -12,6 +12,8 @@ from graph_htmn.generative_inference import generative_inference
 from graph_htmn.recurrent_rdn import RecurrentRDN
 from sklearn.model_selection import StratifiedShuffleSplit
 
+#BRANCH DEVELOP
+
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     # Restrict TensorFlow to only use the first GPU
